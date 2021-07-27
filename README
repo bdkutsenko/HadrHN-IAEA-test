@@ -1,0 +1,63 @@
+     =========================================================
+     Geant4 - an Object-Oriented Toolkit for Simulation in HEP
+     =========================================================
+
+
+                	HadrHN test     
+
+                  V. Ivanchenko, A. Bagulya
+
+The goal of this test is to identify accuracy of Geant4 elementary cross sections 
+versus PDG collection of data and to control the hydrogen cross section from cross 
+sections classes. These elementary cross sections are used to compute cross section 
+off nuclei and are also used in hadronic models.
+
+Projectile: proton, neutron, pi+, pi-, kaon+, kaon-
+Elementary cross sections: “NS”, “PDG16”, “SAID”
+Cross sections classes: “CHIPS”, “BGG”, “XS”
+ 
+Data are from  http://pdg.lbl.gov.
+Files with data are located in HadrHN/data directory. 
+
+	        Compilation
+G4BLOCAL points to directory where geant4-dev is located
+HADSRC -> .../g4tests-verification/hadronic
+G4BWORK points to directory where G4 executables are located (.../bin)
+G4BBUILD points to build directory for geant4 (.../geant4-build-mt/)
+G4VERSION ->  (10.5.0)
+
+mkdir -p ${G4BLOCAL}/tests-build/HadrHN
+cd ${G4BLOCAL}/tests-build/HadrHN
+rm -f HadrHN
+
+cmake -DCMAKE_INSTALL_PREFIX=${G4BLOCAL} \
+      -DGeant4_DIR=${G4BBUILD}/lib64/Geant4-${G4VERSION} ${HADSRC}/HadrHN
+make -j2
+
+cd ${G4BWORK}
+rm -f HadrHN
+ln -s ${G4BLOCAL}/tests-build/HadrHN/HadrHN
+
+cd ${HADSRC}/HadrHN
+
+                Run Productuion
+
+Simple run for proton, neutron:
+$G4BWORK/HadrHN p NS [PDG16/SAID/BGG/CHIPS/XS]
+Simple run for pi+, pi-:
+$G4BWORK/HadrHN pi+ NS [PDG16/SAID/BGG/CHIPS] 
+Simple run for kaon:
+$G4BWORK/HadrHN kaon+ kNS [VG/GG/CHIPS]
+  here VG - work only for K+-
+       GG - for all kaons using VG
+$G4BWORK/HadrHN alpha XS [ION]
+
+               Histogramms
+ROOT files are creating automatically in HadrHN/test directory.
+
+		Plots
+python plotXS.py proton_proton_NS.root 0 # each ROOT file from HadrHN/test directory
+python plotXS.py proton_proton_NS.root 1 # "1" only for p+p interaction to add cosmic data
+
+Plots are creating in HadrHN/plotXS directory.
+
