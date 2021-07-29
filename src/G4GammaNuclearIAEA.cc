@@ -112,21 +112,16 @@ G4double
 G4GammaNuclearIAEA::GetElementCrossSection(const G4DynamicParticle* aParticle,
                                          G4int ZZ, const G4Material* mat)
 {
-  G4double xs = 0.0,rxs = 0.0, lxs = 0.0, lconnect = 130.*MeV, rconnect = 150.*MeV;
+  G4double xs = 0.0;
   G4double ekin = aParticle->GetKineticEnergy();
-  G4DynamicParticle dParticle= *aParticle;
-  G4int Z = (ZZ >= MAXZGAMMAIAEA) ? MAXZGAMMAIAEA - 1 : ZZ; 
+  
+  G4int Z = (ZZ >= MAXZGAMMAIAEA) ? MAXZGAMMAIAEA - 1 : ZZ;
+  
   auto pv = GetPhysicsVector(Z);
   if(pv == nullptr) { return xs; }
-  //if(ekin <= pv->GetMaxEnergy()) {
-  if(ekin <= lconnect){
+  if(ekin <= pv->GetMaxEnergy()) {
     xs = pv->Value(ekin*MeV);
     //xs = pv->LogVectorValue(ekin, aParticle->GetLogKineticEnergy());
-  } else if(ekin > lconnect && ekin < rconnect){
-    dParticle.SetKineticEnergy(rconnect);
-    rxs = coeff[Z]*ggXsection->GetElementCrossSection(&dParticle, Z, mat);
-    lxs = pv->Value(lconnect);
-    xs = rxs + (rxs - lxs)/(rconnect-lconnect)*(ekin-rconnect); // Straight line equation xs(ekin) 
   }
   else {
     xs = coeff[Z]*ggXsection->GetElementCrossSection(aParticle, Z, mat);
@@ -141,90 +136,64 @@ G4GammaNuclearIAEA::GetElementCrossSection(const G4DynamicParticle* aParticle,
 #endif
   return xs;
 }
-//bdk// Add isotopes outside of IAEA
 G4double G4GammaNuclearIAEA::GetIsoCrossSection(
          const G4DynamicParticle* aParticle, 
-	 G4int ZZ, G4int A,
+	 G4int Z, G4int A,
 	 const G4Isotope*, const G4Element*,
 	 const G4Material*)
 {
-  G4double xs = 0.0,rxs = 0.0, lxs = 0.0, lconnect = 130.*MeV, rconnect = 150.*MeV;
+  return IsoCrossSection(aParticle->GetKineticEnergy(), 
+                         aParticle->GetLogKineticEnergy(), Z, A);
+}
+
+//bdk// Add isotopes outside of IAEA
+G4double 
+G4GammaNuclearIAEA::IsoCrossSection(G4double ekin, G4double , 
+                                      G4int ZZ, G4int A)
+{
+  G4double xs = 0.0;
   G4int Z = (ZZ >= MAXZGAMMAIAEA) ? MAXZGAMMAIAEA - 1 : ZZ; 
-  G4DynamicParticle dParticle= *aParticle;
-  G4double ekin = aParticle->GetKineticEnergy();
   /*
   G4cout << "IsoCrossSection  Z= " << Z << "  A= " << A 
          << "  Amin= " << amin[Z] << " Amax= " << amax[Z]
          << " E(MeV)= " << ekin << G4endl;
   */
-  //auto pv = GetPhysicsVector(Z);
-  // if(pv == nullptr) { return xs; }
+  
+  auto pv = GetPhysicsVector(Z);
+  if(pv == nullptr) { return xs; }
+  const G4double emax = pv->GetMaxEnergy();
   
   // compute isotope cross section if applicable
-  if(amin[Z] > 0 && A >= amin[Z] && A <= amax[Z]){
+  if(ekin <= emax && amin[Z] > 0 && A >= amin[Z] && A <= amax[Z]){
     auto pviso = data->GetComponentDataByIndex(Z, A - amin[Z]);
-     if(pviso) {
-        if(ekin <= lconnect){
-    xs = pviso->Value(ekin*MeV);
+    if(pviso) {
+      xs = pviso->Value(ekin*MeV);
     //xs = pv->LogVectorValue(ekin, aParticle->GetLogKineticEnergy());
-  } else if(ekin > lconnect && ekin < rconnect){
-    dParticle.SetKineticEnergy(rconnect);
-    rxs = coeff[Z]*ggXsection->GetIsoCrossSection(&dParticle,Z,A);
-    lxs = pviso->Value(lconnect);
-    xs = rxs + (rxs - lxs)/(rconnect-lconnect)*(ekin-rconnect); // Straight line equation xs(ekin) 
-  }
-  else {
-    xs = coeff[Z]*ggXsection->GetIsoCrossSection(&dParticle,Z,A);
-  }
+  
 #ifdef G4VERBOSE
-  if(verboseLevel > 1) {
-    G4cout  << "G4GammaNuclearIAEA::IsoIAEA: Z= " << Z << " A= " << A 
+    if(verboseLevel > 1) {
+      G4cout  << "G4GammaNuclearIAEA::IsoIAEA: Z= " << Z << " A= " << A 
 	    << " Ekin(MeV)= " << ekin/CLHEP::MeV 
 	    << ", ElmXS(b)= " << xs/CLHEP::barn << G4endl;
   }
 #endif
    return xs;
-     }
-       /*//bdk// TODO Isotope cross section based on element cross-section
-   auto pv = GetPhysicsVector(Z);
-    if(pv) {
-     if(ekin <= lconnect){
-    xs = pviso->Value(ekin*MeV);
-    //xs = pv->LogVectorValue(ekin, aParticle->GetLogKineticEnergy());
-  } else if(ekin > lconnect && ekin < rconnect){
-    dParticle.SetKineticEnergy(rconnect);
-    rxs = coeff[Z]*ggXsection->GetIsoCrossSection(&dParticle,Z,A);
-    lxs = pviso->Value(lconnect);
-    xs = rxs + (rxs - lxs)/(rconnect-lconnect)*(ekin-rconnect); // Straight line equation xs(ekin) 
-  }
-  else {
-    xs = coeff[Z]*ggXsection->GetIsoCrossSection(&dParticle,Z,A);
-  }
-  xs *= A/aeff[Z];   
-#ifdef G4VERBOSE
-  if(verboseLevel > 1) {
-    G4cout  << "G4GammaNuclearIAEA::IsoIAEA: Z= " << Z << " A= " << A 
-	    << " Ekin(MeV)= " << ekin/CLHEP::MeV 
-	    << ", ElmXS(b)= " << xs/CLHEP::barn << G4endl;
-  }
-#endif
-   return xs;
-     }
-       */
-       
+     }   
   } 
 
-
-  xs = coeff[Z]*ggXsection->GetIsoCrossSection(&dParticle,Z,A);
+ if(ekin <= emax) { 
+    xs = pv->Value(ekin*MeV); 
+  } else {
+   xs = 0;////coeff[Z]*ggXsection->GetIsoCrossSection(&dParticle,Z,A);
+   //ekin, Z, aeff[Z]);
+  }
+ //xs *= A/aeff[Z];
   return xs;
-  
-  //return IsoCrossSection(aParticle->GetKineticEnergy(), 
-  //    aParticle->GetLogKineticEnergy(), Z, A);
 }
 
 
 const G4Isotope* G4GammaNuclearIAEA::SelectIsotope(
-       const G4Element* anElement, G4double kinEnergy, G4double)
+       const G4Element* anElement, G4double kinEnergy, G4double logE)
 {
   size_t nIso = anElement->GetNumberOfIsotopes();
   const G4Isotope* iso = anElement->GetIsotope(0);
@@ -252,13 +221,11 @@ const G4Isotope* G4GammaNuclearIAEA::SelectIsotope(
   size_t nn = temp.size();
   if(nn < nIso) { temp.resize(nIso, 0.); }
   
-  G4ThreeVector aDirection = G4ThreeVector(0.0,0.0,1.0);
-  G4DynamicParticle dParticle(G4Gamma::Gamma(),aDirection,kinEnergy);
-  
   for (j=0; j<nIso; ++j) {
     //G4cout << j << "-th isotope " << (*isoVector)[j]->GetN() 
     //       <<  " abund= " << abundVector[j] << G4endl;
-    sum += abundVector[j]*GetIsoCrossSection(&dParticle,  Z, anElement->GetIsotope(j)->GetN(),0,0,0);
+    sum += abundVector[j]*IsoCrossSection(kinEnergy, logE, Z, 
+					  anElement->GetIsotope(j)->GetN());
     temp[j] = sum;
   }
   sum *= q;
