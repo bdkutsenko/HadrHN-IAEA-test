@@ -109,6 +109,8 @@ public:
 
   void BuildPhysicsTable(const G4ParticleDefinition&) final;
 
+  G4double IsoCrossSection(G4double ekin, G4double logekin, G4int Z, G4int A);
+  
   void CrossSectionDescription(std::ostream&) const final;
       
   G4GammaNuclearIAEA & operator=(const G4GammaNuclearIAEA &right) = delete;
