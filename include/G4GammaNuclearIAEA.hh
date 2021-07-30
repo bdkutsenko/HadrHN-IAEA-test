@@ -75,6 +75,19 @@ static const G4int amax[] = {
 205, 208, 209,   0,   0,   0,   0,   226,   0,   232,  //81-90
   231, 238, 237, 241 };
 
+static const G4double aeff[] = {
+  0.,
+ 1.00794, 4.00264, 6.94003, 9.01218,  10.811, 12.0107, 14.0068, 15.9994, 18.9984,   20.18,  //1-10
+ 22.9898,  24.305, 26.9815, 28.0854, 30.9738, 32.0661, 35.4526, 39.9477, 39.0983,  40.078,  //11-20
+ 44.9559, 47.8667, 50.9415, 51.9961,  54.938, 55.8451, 58.9332, 58.6933, 63.5456, 65.3955,  //21-30
+ 69.7231, 72.6128, 74.9216, 78.9594, 79.9035, 83.7993, 85.4677, 87.6166, 88.9058, 91.2236,  //31-40
+ 92.9064, 95.9313, 97.9072, 101.065, 102.906, 106.415, 107.868, 112.411, 114.818,  118.71,  //41-50
+  121.76, 127.603, 126.904, 131.292, 132.905, 137.327, 138.905, 140.115, 140.908, 144.236,  //51-60
+ 144.913, 150.366, 151.964, 157.252, 158.925, 162.497,  164.93, 167.256, 168.934, 173.038,  //61-70
+ 174.967, 178.485, 180.948, 183.842, 186.207, 190.225, 192.216, 195.078, 196.967, 200.599,  //71-80
+ 204.383, 207.217,  208.98, 208.982, 209.987, 222.018,  223.02, 226.025, 227.028, 232.038,  //81-90
+ 231.036, 238.029};
+
 class G4DynamicParticle;
 class G4ParticleDefinition;
 class G4Element;
@@ -109,7 +122,11 @@ public:
 
   void BuildPhysicsTable(const G4ParticleDefinition&) final;
 
-  G4double IsoCrossSection(G4double ekin, G4double logekin, G4int Z, G4int A);
+  G4double IsoCrossSection(G4double ekin, G4int Z, G4int A);
+
+  G4double ElementCrossSection(G4double ekin, G4int Z);
+
+  G4double GammaNuclearGG(G4double ekin, G4int Z, G4int A);
   
   void CrossSectionDescription(std::ostream&) const final;
       
@@ -128,9 +145,9 @@ private:
 
   G4PhysicsVector* RetrieveVector(std::ostringstream& in, G4bool warn);
   
-  G4VCrossSectionDataSet* ggXsection = nullptr;
-  const G4ParticleDefinition* gamma;
-
+  //G4VCrossSectionDataSet* ggXsection = nullptr;
+  const G4ParticleDefinition* theGamma;
+  const G4ParticleDefinition* theProton;
   std::vector<G4double> temp;
   
   G4bool isMaster = false;
@@ -138,6 +155,7 @@ private:
   static const G4int MAXZGAMMAIAEA = 94;
   static G4ElementData* data;
   static G4double coeff[MAXZGAMMAIAEA];
+  static G4double coeffProton;
   static G4String gDataDirectory;
 
 #ifdef G4MULTITHREADED
