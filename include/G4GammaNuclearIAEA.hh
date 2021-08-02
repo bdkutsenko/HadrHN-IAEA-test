@@ -43,6 +43,7 @@
 #define G4GammaNuclearIAEA_h 1
 
 #include "G4VCrossSectionDataSet.hh"
+#include "G4HadronNucleonXsc.hh"
 #include "globals.hh"
 #include "G4ElementData.hh"
 #include "G4PhysicsVector.hh"
@@ -126,7 +127,7 @@ public:
 
   G4double ElementCrossSection(G4double ekin, G4int Z);
 
-  G4double GammaNuclearGG(G4double ekin, G4int Z, G4int A);
+  G4double GammaNuclearGG(G4double ekin, G4int Z, G4double A);
   
   void CrossSectionDescription(std::ostream&) const final;
       
@@ -146,6 +147,7 @@ private:
   G4PhysicsVector* RetrieveVector(std::ostringstream& in, G4bool warn);
   
   //G4VCrossSectionDataSet* ggXsection = nullptr;
+  G4HadronNucleonXsc* GammaProton = nullptr;
   const G4ParticleDefinition* theGamma;
   const G4ParticleDefinition* theProton;
   std::vector<G4double> temp;
