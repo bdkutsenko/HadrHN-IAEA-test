@@ -52,8 +52,10 @@
 //#include "G4IsotopeList.hh"
 #include "G4NuclearRadii.hh"
 #include "G4HadronNucleonXsc.hh"
+#include "G4ComponentGGHadronNucleusXsc.hh"
 #include "G4SystemOfUnits.hh"
 #include "G4Log.hh"
+#include "G4Exp.hh"
 
 #include <fstream>
 #include <sstream>
@@ -86,6 +88,7 @@ G4GammaNuclearIAEA::G4GammaNuclearIAEA()
   }
   //ggXsection = G4CrossSectionDataSetRegistry::Instance()->GetCrossSectionDataSet("PhotoNuclearXS");
   //if(ggXsection == nullptr) ggXsection = new G4PhotoNuclearCrossSection();
+  if(GammaProton == nullptr) GammaProton = new G4HadronNucleonXsc();
   SetForAllAtomsAndEnergies(true);
 }
 
@@ -134,7 +137,7 @@ G4GammaNuclearIAEA::ElementCrossSection(G4double ekin, G4int ZZ){
     xs = pv->Value(ekin*MeV);
   }
   else {
-    xs = coeff[Z]*GammaNuclearGG(ekin ,Z ,round(aeff[Z]));
+    xs = coeff[Z]*GammaNuclearGG(ekin ,Z ,aeff[Z]);
   }
 
 #ifdef G4VERBOSE
@@ -148,28 +151,31 @@ G4GammaNuclearIAEA::ElementCrossSection(G4double ekin, G4int ZZ){
   
 }
 
-G4double G4GammaNuclearIAEA::GammaNuclearGG(G4double ekin, G4int Z, G4int A) {
-  G4double xsP = 0, xs = 0, R = G4NuclearRadii::Radius(Z,A); //R = G4NuclearRadii::RadiusHNGG(A);
-  const G4double cofInelastic = 70.;
-  G4double nucleusSquare = CLHEP::pi*R*R/cofInelastic;
+G4double G4GammaNuclearIAEA::GammaNuclearGG(G4double ekin, G4int Z, G4double A) {
+  G4double xsP = 0, xs = 0, R = G4NuclearRadii::Radius(Z,round(A));
+  // G4doulbe R = G4NuclearRadii::RadiusHNGG(A);
+  const G4double cofInelastic = 160.;
+  G4double nucleusSquare =  CLHEP::pi*R*R/cofInelastic;
   auto pvP = GetPhysicsVector(1);
   if(pvP == nullptr) { return xs; }
   const G4double emax = pvP->GetMaxEnergy();
   if(ekin <= emax){
   xsP = pvP->Value(ekin);
   }
-  else{
-    G4HadronNucleonXsc* GammaProton = new G4HadronNucleonXsc(); 
+  else{ 
     xsP =  coeffProton*GammaProton->HadronNucleonXscPDG(theGamma, theProton, ekin);
   }
       
   if( A > 1 ) {
-    xs = nucleusSquare*G4Log(1. + A*xsP/nucleusSquare);
-  }
-  
+    // G4cout<<"A*sigma = "<<A*xsP<<" pi*R^2 = "<<nucleusSquare<<G4endl;
+    xs = nucleusSquare*G4Log(1. + A*xsP / nucleusSquare);//+1.e-24*G4Exp(-0.01*ekin);///+G4Exp(-0.02*ekin);
+    //xs = xsP;
+    if(ekin==200*MeV) G4cout<<"ratio = "<< powf(A*xsP / nucleusSquare,5./6)<<G4endl;
+    //if(ekin==200*MeV) G4cout<<"xs = "<<xs<<" exp ="<<+1.e-24*G4Exp(-0.01*ekin)<<" ekin = "<<ekin<<G4endl;
+    //G4cout<<"ratio = "<<A*xsP / nucleusSquare<<G4endl;							       
+  } 
   else { return xsP; }
  
-
   return xs;
       
   }
@@ -343,7 +349,6 @@ G4GammaNuclearIAEA::BuildPhysicsTable(const G4ParticleDefinition& p)
   const G4double emax = pvP->GetMaxEnergy();
  
  
-   G4HadronNucleonXsc* GammaProton = new G4HadronNucleonXsc(); 
   G4double sig1 = pvP->Value(emax);
   G4double sig2 = GammaProton->HadronNucleonXscPDG(theGamma, theProton, emax);
   coeffProton = (sig2 > 0.) ? sig1/sig2 : 1.0;
@@ -411,7 +416,6 @@ void G4GammaNuclearIAEA::Initialise(G4int Z)
       //ost1 << gDataDirectory << Z << "_" << A;
       ost1 << "data/inel"<< Z << "_" << A;
       G4PhysicsVector* v1 = RetrieveVector(ost1, false);
-      //G4cout<<v1->Value(10.)<<G4endl;
       data->AddComponent(Z, A, v1); 
     }
   }
@@ -419,7 +423,8 @@ void G4GammaNuclearIAEA::Initialise(G4int Z)
   // smooth transition 
   G4double sig1 = (*v)[v->GetVectorLength()-1];
   G4double ehigh= v->GetMaxEnergy();
-  G4double sig2 = GammaNuclearGG(ehigh ,Z ,round(aeff[Z]));
+  G4double sig2 = GammaNuclearGG(ehigh ,Z , aeff[Z]);
+  G4cout<<" Z = "<<Z<<" sigma ="<<sig2/millibarn<<G4endl;
   coeff[Z] = (sig2 > 0.) ? sig1/sig2 : 1.0;
 
   
