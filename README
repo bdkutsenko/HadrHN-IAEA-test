@@ -3,20 +3,17 @@
      =========================================================
 
 
-                	HadrHN test     
+                	HadrHN-IAEA-test     
 
-                  V. Ivanchenko, A. Bagulya, B. Kutsenko
+                       B. Kutsenko
 
-The goal of this test is to identify accuracy of Geant4 elementary cross sections 
-versus PDG collection of data and to control the hydrogen cross section from cross 
-sections classes. These elementary cross sections are used to compute cross section 
-off nuclei and are also used in hadronic models.
+This is modification to HadrHN specificly for the purpose of the test of the new photonuclear class based on IAEA model. 
+The goal of this test is to identify accuracy of Geant4 elementary cross sections of the new IAEA model versus CHIPS and previous XS photonuclear models. 
 
-Projectile: proton, neutron, pi+, pi-, kaon+, kaon-
-Elementary cross sections: “NS”, “PDG16”, “SAID”
-Cross sections classes: “CHIPS”, “BGG”, “XS”
+Projectile: gamma
+Cross sections classes: “CHIPS”, “IAEA”, “XS”
  
-Data are from  http://pdg.lbl.gov.
+PDG data are from  http://pdg.lbl.gov.
 Files with data are located in HadrHN/data directory. 
 
 	        Compilation
@@ -42,22 +39,29 @@ cd ${HADSRC}/HadrHN
 
                 Run Productuion
 
-Simple run for proton, neutron:
-$G4BWORK/HadrHN p NS [PDG16/SAID/BGG/CHIPS/XS]
-Simple run for pi+, pi-:
-$G4BWORK/HadrHN pi+ NS [PDG16/SAID/BGG/CHIPS] 
-Simple run for kaon:
-$G4BWORK/HadrHN kaon+ kNS [VG/GG/CHIPS]
-  here VG - work only for K+-
-       GG - for all kaons using VG
-$G4BWORK/HadrHN alpha XS [ION]
+Simple run for gamma:
+$G4BWORK/HadrHN gamma [XS/CHIPS/IAEA] [target atomic name (H)]
+
+Simple run for gamma with isotope target on IAEA model (deuteron as an example):
+$G4BWORK/HadrHN gamma ISOIAEA [ISOXS/ISOCHIPS/ISOIAEA] H [element target atomic name (H)]
+
+Enter A: 2
+
 
                Histogramms
 ROOT files are creating automatically in HadrHN/test directory.
 
 		Plots
-python plotXS.py proton_proton_NS.root 0 # each ROOT file from HadrHN/test directory
-python plotXS.py proton_proton_NS.root 1 # "1" only for p+p interaction to add cosmic data
+
+python plotXSmodel_only.py gamma_proton_CHIPS_1_0.root 0 # Plot from 0 to 200 MeV in linear scale on x and logarithmic scale on y
+python plotXSmodel_only.py gamma_proton_CHIPS_1_0.root 1 # Plot from 0 to 100 000 MeV in double log scale
+python plotXSmodel_only.py gamma_proton_CHIPS_1_0.root 2 # Plot from 0 to 1.e+13 MeV in 10-based logarithmic scale on y
+
+The same but with two model comparison :
+python plotXSmodel_only.py gamma_proton_CHIPS_1_0.root gamma_proton_IAEA_1_0.root 0 # Plot from 0 to 200 MeV in linear scale on x and logarithmic scale on y
+python plotXSmodel_only.py gamma_proton_CHIPS_1_0.root gamma_proton_IAEA_1_0.root 1 # Plot from 0 to 100 000 MeV in double log scale
+python plotXSmodel_only.py gamma_proton_CHIPS_1_0.root gamma_proton_IAEA_1_0.root 2 # Plot from 0 to 1.e+13 MeV in 10-based logarithmic scale on y
+ 
 
 Plots are creating in HadrHN/plotXS directory.
 
