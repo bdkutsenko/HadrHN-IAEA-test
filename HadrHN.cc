@@ -35,7 +35,7 @@
 //
 //      Creation date: 14 August 2018
 //
-//      Modifications:
+//      Modifications: 20 Jule 2021 B.Kutsenko
 // -------------------------------------------------------------------
 
 #include "globals.hh"
@@ -344,15 +344,13 @@ int main(int argc, char** argv)
   // ------- Histograms name 
   Histo    histo;
   G4String hname;
-  if(strcmp(atomName,"H")==0 && A != 2) hname = "test/" + project->GetParticleName() + "_" 
-    + target->GetParticleName() + "_" + name + "_" +std::to_string(Z);
-  else if (strcmp(atomName,"H")==0 && A == 2)hname = "test/" + project->GetParticleName() + "_" 
-    +  "deuteron_" + name + "_" +std::to_string(Z) +"_"+std::to_string(A);
-  else hname = "test/" + project->GetParticleName() + "_" 
+  hname = "test/" + project->GetParticleName() + "_" 
 	 + atomName + "_" + name + "_" +std::to_string(Z)+"_"+std::to_string(A) ;
   G4double mass = project->GetPDGMass()/MeV;
 
+  //const G4int nbins = 4801;
   const G4int nbins = 48001;
+  
   G4double pmin =  10*MeV;
   G4double pmax =  1e10*GeV;
   G4double xmin =  std::log10(pmin);
