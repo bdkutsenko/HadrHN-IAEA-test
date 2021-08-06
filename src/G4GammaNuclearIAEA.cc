@@ -46,8 +46,12 @@
 #include "G4PhotoNuclearCrossSection.hh"
 #include "Randomize.hh"
 #include "G4SystemOfUnits.hh"
-#include "G4Gamma.hh"
 //#include "G4IsotopeList.hh"
+#include "G4NuclearRadii.hh"
+#include "G4ComponentGGHadronNucleusXsc.hh"
+#include "G4SystemOfUnits.hh"
+#include "G4Log.hh"
+#include "G4Exp.hh"
 
 #include <fstream>
 #include <sstream>
@@ -61,7 +65,7 @@ G4_DECLARE_XS_FACTORY(G4GammaNuclearIAEA);
 G4ElementData* G4GammaNuclearIAEA::data = nullptr;
 
 G4double G4GammaNuclearIAEA::coeff[] = {0.0};
-std::vector <G4double> G4GammaNuclearIAEA::coeffA[];
+G4double G4GammaNuclearIAEA::coeffPDG[] = {0.0};
 
 G4String G4GammaNuclearIAEA::gDataDirectory = "";
 
@@ -78,9 +82,9 @@ G4GammaNuclearIAEA::G4GammaNuclearIAEA()
     G4cout  << "G4GammaNuclearIAEA::G4GammaNuclearIAEA Initialise for Z < " 
 	    << MAXZGAMMAIAEA << G4endl;
   }
-  ggXsection = G4CrossSectionDataSetRegistry::Instance()->GetCrossSectionDataSet("PhotoNuclearXS");
+  //ggXsection = G4CrossSectionDataSetRegistry::Instance()->GetCrossSectionDataSet("PhotoNuclearXS");
   if(ggXsection == nullptr) ggXsection = new G4PhotoNuclearCrossSection();
-  theGamma = new G4DynamicParticle(gamma, G4ThreeVector(1,0,0), 0);
+  GammaProton = new G4ComponentGGHadronNucleusXsc();
   SetForAllAtomsAndEnergies(true);
 }
 
@@ -113,25 +117,30 @@ G4bool G4GammaNuclearIAEA::IsIsoApplicable(const G4DynamicParticle*,
 
 G4double 
 G4GammaNuclearIAEA::GetElementCrossSection(const G4DynamicParticle* aParticle,
-                                         G4int ZZ, const G4Material*)
+                                         G4int Z, const G4Material*)
 {
-  return ElementCrossSection(aParticle->GetKineticEnergy(), ZZ);
+  return ElementCrossSection(aParticle->GetKineticEnergy(), Z);
 }
 
 G4double 
 G4GammaNuclearIAEA::ElementCrossSection(G4double ekin, G4int ZZ){
-    
+
   G4double xs = 0.0;
   G4int Z = (ZZ >= MAXZGAMMAIAEA) ? MAXZGAMMAIAEA - 1 : ZZ;
 
-  theGamma->SetKineticEnergy(ekin);  
+  G4ThreeVector mom(0.0,0.0,1.0);
+  G4DynamicParticle dp(gamma, mom, ekin);
+
   auto pv = GetPhysicsVector(Z);
   if(pv == nullptr) { return xs; }
   if(ekin <= pv->GetMaxEnergy()) {
     xs = pv->Value(ekin*MeV);
   }
+  else if(ekin<=1.*GeV){
+    xs = coeff[Z]*ggXsection->GetElementCrossSection(&dp, Z, 0);
+  }
   else {
-    xs = coeff[Z]*ggXsection->GetElementCrossSection(theGamma, Z, 0);
+    xs = coeffPDG[Z]*GammaProton->GetHadronNucleonXscPDG(&dp,round(aeff[Z]), Z);
   }
 
 #ifdef G4VERBOSE
@@ -142,18 +151,19 @@ G4GammaNuclearIAEA::ElementCrossSection(G4double ekin, G4int ZZ){
   }
 #endif
   return xs;
-
+  
 }
 
 G4double G4GammaNuclearIAEA::GetIsoCrossSection(
          const G4DynamicParticle* aParticle, 
-	 G4int ZZ, G4int A,
+	 G4int Z, G4int A,
 	 const G4Isotope*, const G4Element*,
 	 const G4Material*)
 {
-  return IsoCrossSection(aParticle->GetKineticEnergy(), ZZ, A);
+  return IsoCrossSection(aParticle->GetKineticEnergy(), Z, A);
 }
 
+//bdk// Add isotopes outside of IAEA
 G4double 
 G4GammaNuclearIAEA::IsoCrossSection(G4double ekin, G4int ZZ, G4int A)
 {
@@ -164,16 +174,18 @@ G4GammaNuclearIAEA::IsoCrossSection(G4double ekin, G4int ZZ, G4int A)
          << "  Amin= " << amin[Z] << " Amax= " << amax[Z]
          << " E(MeV)= " << ekin << G4endl;
   */
-  theGamma->SetKineticEnergy(ekin);
+  G4ThreeVector mom(0.0,0.0,1.0);
+  G4DynamicParticle dp(gamma, mom, ekin);
+  
   auto pv = GetPhysicsVector(Z);
   if(pv == nullptr) { return xs; }
   const G4double emax = pv->GetMaxEnergy();
 
   // compute isotope cross section if applicable
-  if(amin[Z] > 0 && A >= amin[Z] && A <= amax[Z]){
+  if(ekin <= emax && amin[Z] > 0 && A >= amin[Z] && A <= amax[Z]){
     auto pviso = data->GetComponentDataByIndex(Z, A - amin[Z]);
     
-    if(pviso && ekin <=pviso->GetMaxEnergy()) {
+    if(pviso) {
       xs = pviso->Value(ekin*MeV);
   
 #ifdef G4VERBOSE
@@ -190,16 +202,15 @@ G4GammaNuclearIAEA::IsoCrossSection(G4double ekin, G4int ZZ, G4int A)
  if(ekin <= emax) { 
     xs = pv->Value(ekin*MeV); 
   }
- else {
-   if(Z<=2) xs = coeffA[Z][A - amin[Z]]*ggXsection->GetElementCrossSection(theGamma, Z, 0);
-   
-   else xs = coeff[Z]*ggXsection->GetElementCrossSection(theGamma, Z, 0);
- }
-
- if(Z>2) xs *= A/aeff[Z];
- 
+ else if(ekin<=1.*GeV) {
+   xs = coeff[Z]*ggXsection->GetElementCrossSection(&dp, Z, 0);
+   //G4cout<<xs<<G4endl;
+  }
+  else {
+    xs = coeffPDG[Z]*GammaProton->GetHadronNucleonXscPDG(&dp,round(aeff[Z]), Z);
+  }
+ xs *= A/aeff[Z];
   return xs;
-
 }
 
 
@@ -209,6 +220,7 @@ const G4Isotope* G4GammaNuclearIAEA::SelectIsotope(
   size_t nIso = anElement->GetNumberOfIsotopes();
   const G4Isotope* iso = anElement->GetIsotope(0);
 
+  //G4cout << "SelectIsotope NIso= " << nIso << G4endl;
   if(1 == nIso) { return iso; }
 
   const G4double* abundVector = anElement->GetRelativeAbundanceVector();
@@ -355,33 +367,29 @@ void G4GammaNuclearIAEA::Initialise(G4int Z)
   if(amin[Z] > 0) {
     size_t nmax = (size_t)(amax[Z]-amin[Z]+1);
     data->InitialiseForComponent(Z, nmax);
-    if(Z<=2) coeffA[Z].clear();
+
     for(G4int A=amin[Z]; A<=amax[Z]; ++A) {
       std::ostringstream ost1;
       //ost1 << gDataDirectory << Z << "_" << A;
       ost1 << "data/inel"<< Z << "_" << A;
       G4PhysicsVector* v1 = RetrieveVector(ost1, false);
-      data->AddComponent(Z, A, v1);
-      if(Z<=2){
-	if(v1 == nullptr) coeffA[Z].push_back(1.);
-	else{
-	theGamma->SetKineticEnergy(v1->GetMaxEnergy());
-	G4double sig1 = (*v1)[v1->GetVectorLength()-1];
-	G4double sig2 = ggXsection->GetElementCrossSection(theGamma, Z, 0);
-	G4cout<< " sig1 = "<<sig1<<" "<<sig1/sig2<<G4endl;
-	if(sig2 > 0.) coeffA[Z].push_back(sig1/sig2);
-	else coeffA[Z].push_back(1.);
-	}
-      }
+      data->AddComponent(Z, A, v1); 
     }
   }
 
   // smooth transition
-  theGamma->SetKineticEnergy(v->GetMaxEnergy());
+  G4ThreeVector mom(0.0,0.0,1.0);
+  G4DynamicParticle dp(gamma, mom, v->GetMaxEnergy());
+  
   G4double sig1 = (*v)[v->GetVectorLength()-1];
-  G4double sig2 = ggXsection->GetElementCrossSection(theGamma, Z, 0);
+  G4double sig2 = ggXsection->GetElementCrossSection(&dp, Z, 0);
   coeff[Z] = (sig2 > 0.) ? sig1/sig2 : 1.0;
   
+  if( v->GetMaxEnergy()<1.*GeV) dp.SetKineticEnergy(1.*GeV);
+  else dp.SetKineticEnergy(v->GetMaxEnergy());
+  sig1 = ggXsection->GetElementCrossSection(&dp, Z, 0);
+  sig2 = GammaProton->GetHadronNucleonXscPDG(&dp,round(aeff[Z]), Z);
+  coeffPDG[Z] = (sig2 > 0.) ? sig1/sig2 : 1.0;
  
   
 }
@@ -420,3 +428,48 @@ G4GammaNuclearIAEA::RetrieveVector(std::ostringstream& ost, G4bool warn)
   return v;
 }
 
+
+
+
+
+  
+/*
+void G4GammaNuclearIAEA::Initialise(G4int Z, G4int A)
+{
+  if(data[Z] != nullptr) { return; }
+  for(int id=0; id<MAXZGAMMAIAEA; id++) {
+    G4PhysicsLogVector* isodata[MAXZGAMMAIAEA]={nullptr};
+    vecisodata.push_back(isodata[0]);
+  }
+  
+  // upload data from file
+  vecisodata[Z][A] = new G4PhysicsLogVector();
+  
+  std::ostringstream ost;
+  ost << FindDirectoryPath() << Z ;
+  std::ifstream filein(ost.str().c_str());
+  if (!(filein)) {
+    G4ExceptionDescription ed;
+    ed << "Data file <" << ost.str().c_str()
+       << "> is not opened!";
+    G4Exception("G4GammaNuclearIAEA::Initialise(..)","had014",
+                FatalException, ed, "Check G4PARTICLEIAEADATA");
+    return;
+  }
+  if(verboseLevel > 1) {
+    G4cout << "file " << ost.str() 
+	   << " is opened by G4GammaNuclearIAEA" << G4endl;
+  }
+    
+  // retrieve data from DB
+  if(!data[Z]->Retrieve(filein, true)) {
+    G4ExceptionDescription ed;
+    ed << "Data file <" << ost.str().c_str()
+       << "> is not retrieved!";
+    G4Exception("G4GammaNuclearIAEA::Initialise(..)","had015",
+		FatalException, ed, "Check G4PARTICLEIAEADATA");
+    return;
+  }
+  // smooth transition 
+}
+*/
