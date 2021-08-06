@@ -28,7 +28,10 @@ def plotXS():
         sys.exit()
     else:
         fname = sys.argv[1]
-        flag  = int(sys.argv[2])
+        fname2 = sys.argv[2]
+        
+
+        flag  = int(sys.argv[3])
 
     project = os.path.splitext(os.path.basename(fname))[0].split('_')[0]
     target = os.path.splitext(os.path.basename(fname))[0].split('_')[1]
@@ -36,12 +39,19 @@ def plotXS():
     Z = os.path.splitext(os.path.basename(fname))[0].split('_')[3]
     A = os.path.splitext(os.path.basename(fname))[0].split('_')[4]
 
+    project2 = os.path.splitext(os.path.basename(fname2))[0].split('_')[0]
+    target2 = os.path.splitext(os.path.basename(fname2))[0].split('_')[1]
+    model_name2 = os.path.splitext(os.path.basename(fname2))[0].split('_')[2]
+    Z2 = os.path.splitext(os.path.basename(fname2))[0].split('_')[3]
+
     if model_name == 'kNS':
         model_name = 'NS'
 
     #HADSRC = readEnvVar('HADSRC')
     testpath = os.path.join('./','')
     dirName = os.path.join('plotXS/',str(target))
+
+    
     try:
     # Create target Directory
         os.mkdir(dirName)
@@ -55,7 +65,7 @@ def plotXS():
         
     plotpath = os.path.join('./','plotXS/'+str(target))
     datapath = os.path.join('./','data')
-
+    expDatapath = os.path.join('./','expData')
 
     
     if (int(flag) == 0 or int(flag == 1)) and project != 'gamma':
@@ -87,9 +97,9 @@ def plotXS():
 
     Name = 'Total, elastic and inelastic cross sections ' + project + ' + ' + target + ' in mb, model = ' + model_name
     if project == 'gamma':
-        Name = 'Total cross sections gamma' + ' + '+target + A+ ' in mb, model = ' + model_name
-        
-    crossampl = [0,   10,   6,   10,  6,  20,  24,  26,  29,  30,  30,  30,  45,  90,  50,  60,  70,  80,  65,  90, 100,  100,  110,  110,  120,  120,  130,  130,  140,  140, 150,  150,  160,   170,   170,  200,   210,   220,  230,  240,   250, 260,   270,  280,  290, 300, 310, 320, 330, 340, 350,   360, 370,   380, 390, 400,   410,   420,   430,   440,  450,   460,   470, 480,   490,   500,   510,   520,   530, 540,  550,   560, 600, 600,   610,   620,   630, 650, 660,   680, 700, 720,  740,   760,   780,   800,   820,   840,   860, 880, 900]
+        Name = 'Total cross sections gamma' + ' + '+target + A+ ' in mb, model = ' + model_name + ' + ' + model_name2
+         
+    crossampl = [0,   4,   6,   10,  6,  20,  24,  26,  29,  30,  30,  30,  45,  90,  50,  60,  70,  80,  65,  90, 100,  100,  110,  110,  120,  120,  130,  130,  140,  140, 150,  150,  160,   170,   170,  200,   210,   220,  230,  240,   250, 260,   270,  280,  290, 300, 310, 320, 330, 340, 350,   360, 370,   380, 390, 400,   410,   420,   430,   440,  450,   460,   470, 480,   490,   500,   510,   520,   530, 540,  550,   560, 600, 600,   610,   620,   630, 650, 660,   680, 700, 720,  740,   760,   780,   800,   820,   840,   860, 880, 900]
     lbound0=1.
     rbound0=100000.
     lbound1=1.
@@ -99,11 +109,11 @@ def plotXS():
     elif project == 'kaon+':
         hhh = gPad.DrawFrame(1, 1., 7, 100. ,'cross sections in mb')
     elif project == 'gamma' and int(flag) == 2:
-        hhh = gPad.DrawFrame(1., 0.1, 13., crossampl[int(Z)] ,'cross sections in mb')
-    elif project == 'gamma' and int(flag) == 0 :
-        hhh = gPad.DrawFrame(lbound0, 0.1, rbound0, 4*crossampl[int(Z)] ,'cross sections in mb')
-    elif project == 'gamma' and int(flag) == 1:
-        hhh = gPad.DrawFrame(lbound1, 0.1, rbound1, crossampl[int(Z)] ,'cross sections in mb')
+        hhh = gPad.DrawFrame(0.1, 0.01, 13., crossampl[int(Z)] ,'cross sections in mb')
+    elif project == 'gamma' and int(flag) == 1 :
+        hhh = gPad.DrawFrame(lbound0, 0.01, rbound0, 4*crossampl[int(Z)] ,'cross sections in mb')
+    elif project == 'gamma' and int(flag) == 0:
+        hhh = gPad.DrawFrame(lbound1, 0., rbound1, crossampl[int(Z)] ,'cross sections in mb')
     elif project == 'proton':
         hhh = gPad.DrawFrame(1, 1., 12, 1000. ,'cross sections in mb')
     else:
@@ -121,13 +131,13 @@ def plotXS():
     hhh.Draw('AXIS SAME')
     if int(flag) == 2:
         gPad.SetLogy(1)
-    elif int(flag) == 0 :
+    elif int(flag) == 1 :
         gPad.SetLogx(1)
         gPad.SetLogy(1)
     gPad.SetGrid(1, 1)
     gPad.Update()
 
-    leg = TLegend(.77, .75, 0.97, .95)
+    leg = TLegend(.45, .75, 0.97, .9)
     leg.SetTextSize(.03)
     leg.SetHeader('Cross sections') 
 
@@ -135,22 +145,36 @@ def plotXS():
     print('File to open ', rootflname)
     f1 = TFile(rootflname)
     if int(flag) == 0 or int(flag) == 1:
-        AddH1(f1, leg, 2, 'h4', 'Photonuclear Low Energy region ' + model_name)
+        AddH1(f1, leg, 2, 2, 'h4', 'Photonuclear Low Energy region ' + model_name)
     else:
-        AddH1(f1, leg, 2, 'h0', 'Inelastic ' + model_name)
+        AddH1(f1, leg, 2, 2, 'h0', 'Inelastic ' + model_name)
     c1.Update()
     if project != 'gamma':
-        AddH1(f1, leg, 3, 'h1', 'Elastic ' + model_name)
+        AddH1(f1, leg, 3, 2, 'h1', 'Elastic ' + model_name)
         c1.Update()
-        AddH1(f1, leg, 4, 'h2', 'Total ' + model_name)
+        AddH1(f1, leg, 4, 2, 'h2', 'Total ' + model_name)
         c1.Update()
+    rootflname = os.path.join(testpath, fname2)
+    print('File to open ', rootflname)
+    f2 = TFile(rootflname)
+    if int(flag) == 0 or int(flag) == 1:
+        AddH1(f2, leg, 4, 2, 'h4', 'Photonuclear Low Energy region ' + model_name2)
+    else:
+        AddH1(f2, leg, 4, 2, 'h0', 'Inelastic ' + model_name2 )
 
+
+    datafile = os.path.join(expDatapath, 'rpp2016-' + str(project) + str(target) +'_'+str(Z)+'_'+str(A)+ '_total.dat')
+    if os.path.isfile(datafile) and flag == 2:
+        AddGraph(datafile, leg, 'data Tot PDG16', 2)
+        
+    c1.Update()
+    leg.Draw()
     if int(flag) == 2:
-       fout = os.path.join(plotpath, 'A_' + os.path.splitext(os.path.basename(fname))[0]) + '.png'
-    elif int(flag) == 1:
-       fout = os.path.join(plotpath, 'A_' + os.path.splitext(os.path.basename(fname))[0])+'_'+str(lbound1)+'_'+str(rbound1) + 'MeV.png'
+       fout = os.path.join(plotpath, 'A_' + model_name + '_' + model_name2 +'_'+str(Z)+'_'+str(A)+ '.png')
     elif int(flag) == 0:
-        fout = os.path.join(plotpath, 'A_' + os.path.splitext(os.path.basename(fname))[0])+'_'+str(lbound0)+'_'+str(rbound0) + 'MeV.png'
+       fout = os.path.join(plotpath, 'A_' + model_name + '_' + model_name2 + '_' +str(lbound1)+'_'+str(rbound1) + 'MeV_'+str(Z)+'_'+str(A)+'.png')
+    elif int(flag) == 1:
+        fout = os.path.join(plotpath, 'A_' + model_name + '_' + model_name2 +'_'+str(lbound0)+'_'+str(rbound0) +'MeV_'+str(Z)+'_'+str(A) +'.png')
     c1.Print(fout)
     c1.Close()
 
@@ -169,10 +193,10 @@ def openFile(fileName):
         print('Input file <',fileName, '> does not exist! Exit')
         sys.exit(2)
 
-def AddH1(ff, leg, idx, hh, title):
-    h1 = gROOT.FindObject(hh)
+def AddH1(ff, leg, idx, wdth, hh, title):
+    h1 = ff.Get(hh)
     h1.SetLineColor(idx)
-    h1.SetLineWidth(2)
+    h1.SetLineWidth(wdth)
     h1.Draw('HISTO SAME C')
     leg.AddEntry(h1, title, 'l')
 
@@ -202,9 +226,9 @@ def AddGraph(ff, leg, title, idx):
      globals()['gr' + str(idx)] = TGraphAsymmErrors(len(PLAB),PLAB,SIG,errPLABl,errPLABh,errSIGl,errSIGh)
      globals()['gr' + str(idx)].SetMarkerStyle(19+idx)
      globals()['gr' + str(idx)].SetMarkerColor(1)
-     globals()['gr' + str(idx)].SetMarkerSize(0.4)
+     globals()['gr' + str(idx)].SetMarkerSize(0.5)
      globals()['gr' + str(idx)].Draw('SAME P')
-     leg.AddEntry(globals()['gr' + str(idx)],title,'p')
+     leg.AddEntry(globals()['gr' + str(idx)],title,'ep')
 
      del PLAB[:]
      del errPLABl[:]

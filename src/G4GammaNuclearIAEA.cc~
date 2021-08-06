@@ -78,7 +78,7 @@ G4GammaNuclearIAEA::G4GammaNuclearIAEA()
     G4cout  << "G4GammaNuclearIAEA::G4GammaNuclearIAEA Initialise for Z < " 
 	    << MAXZGAMMAIAEA << G4endl;
   }
-  ggXsection = G4CrossSectionDataSetRegistry::Instance()->GetCrossSectionDataSet("PhotoNuclearXS");
+  //ggXsection = G4CrossSectionDataSetRegistry::Instance()->GetCrossSectionDataSet("PhotoNuclearXS");
   if(ggXsection == nullptr) ggXsection = new G4PhotoNuclearCrossSection();
   theGamma = new G4DynamicParticle(gamma, G4ThreeVector(1,0,0), 0);
   SetForAllAtomsAndEnergies(true);
