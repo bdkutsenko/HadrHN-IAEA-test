@@ -5,7 +5,7 @@
 
                 	HadrHN-IAEA-test     
 
-                       B. Kutsenko
+                           B. Kutsenko
 
 This is modification to HadrHN specificly for the purpose of the test of the new photonuclear class based on IAEA model. 
 The goal of this test is to identify accuracy of Geant4 elementary cross sections of the new IAEA model versus CHIPS and previous XS photonuclear models. 
