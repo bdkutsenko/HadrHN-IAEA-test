@@ -347,8 +347,15 @@ int main(int argc, char** argv)
   hname = "test/" + project->GetParticleName() + "_" 
 	 + atomName + "_" + name + "_" +std::to_string(Z)+"_"+std::to_string(A) ;
   G4double mass = project->GetPDGMass()/MeV;
+  const G4int lnbins = 900001;
+  const G4int nbins = 50001;
+  G4double lxmin = 0*MeV;
+  G4double lxmax = 1e5*MeV;
+  G4double dlx = (lxmax - lxmin)/G4double(lnbins-1);
 
-  const G4int nbins = 300001;
+  G4double lowxmin = 0*MeV;
+  G4double lowxmax = 200*MeV;
+  G4double dlowx = (lowxmax - lowxmin)/G4double(nbins-1);
   
   G4double pmin =  1*MeV;
   G4double pmax =  1e10*GeV;
@@ -356,31 +363,42 @@ int main(int argc, char** argv)
   G4double xmax =  std::log10(pmax);
   G4double dx = (xmax - xmin)/G4double(nbins-1);
   
+  G4double xse[nbins],xsi[nbins],xst[nbins],em[nbins], lxsi[lnbins], lowxsi[nbins];
+  
   histo.Add1D("0","Inelastic",nbins,xmin-dx*0.5,xmax+dx*0.5);
   histo.Add1D("1","Elastic",nbins,xmin-dx*0.5,xmax+dx*0.5);
   histo.Add1D("2","Total",nbins,xmin-dx*0.5,xmax+dx*0.5);
   histo.Add1D("3","EM Elastic",nbins,xmin-dx*0.5,xmax+dx*0.5);
-
-  G4double lxmin = 0*MeV;
-  G4double lxmax = 1e5*MeV;
-  G4double dlx = (lxmax - lxmin)/G4double(nbins-1);
-  
-  G4double lowxmin = 0*MeV;
-  G4double lowxmax = 200*MeV;
-  G4double dlowx = (lowxmax - lowxmin)/G4double(nbins-1);
-  if(partname == "gamma") histo.Add1D("4","Photonuclear Low Energy Region",nbins,lxmin-dlx*0.5,lxmax+dlx*0.5);
+  if(partname == "gamma") histo.Add1D("4","Photonuclear Low Energy Region",lnbins,lxmin-dlx*0.5,lxmax+dlx*0.5);
   if(partname == "gamma") histo.Add1D("5","Photonuclear Lowest Energy Region",nbins,lowxmin-dlowx*0.5,lowxmax+dlowx*0.5);
   histo.SetFileName(hname);
   histo.Book();
   G4cout << "Histograms are booked output file <" << hname << "> "
 	 << G4endl;
 
-  G4double xse[nbins],xsi[nbins],xst[nbins],em[nbins],lxsi[nbins],lowxsi[nbins];
+  dParticle.SetDefinition(project);
+  G4double lx0 = lxmin;
+  
+  for (G4int i=0; i<lnbins; ++i) {
+    G4double lp = lx0;
+    lx0 += dlx;
+    G4double le = std::sqrt(lp*lp+mass*mass)-mass;
+    dParticle.SetKineticEnergy(le);
+      if(isHNX <0){
+      if (idx == 6 && (name == "CHIPS" || name == "XS" || name == "IAEA")){
+	lxsi[i] = inel->GetElementCrossSection(&dParticle,mat->GetZ(),0)/millibarn;
+      } else if (idx == 6 && (name == "ISOCHIPS" || name == "ISOXS" ||name == "ISOIAEA")){
+	lxsi[i] = inel->GetIsoCrossSection(&dParticle,Z,A)/millibarn;
+      } 
+    }
+  if(idx == 6) histo.Fill(4,lx0,lxsi[i]);
+  }
+  
+ 
 
   G4int i;
   dParticle.SetDefinition(project);
   G4double x0 = xmin;
-  G4double lx0 = lxmin;
   G4double lowx0 = lxmin;
   
   if(verbose>1) { 
@@ -393,31 +411,25 @@ int main(int argc, char** argv)
   }
 
   for (i=0; i<nbins; ++i) {
-    G4double p = std::pow(10., x0)*MeV;
-    G4double lp = lx0;
+    G4double p = std::pow(10., x0)*MeV;   
     G4double lowp = lowx0;
 
-    lowx0 += dlowx;
-    lx0 += dlx;    
+    lowx0 += dlowx;    
     x0 += dx;
     
     G4double e = std::sqrt(p*p+mass*mass)-mass;
-    G4double le = std::sqrt(lp*lp+mass*mass)-mass;
     G4double lowe = std::sqrt(lowp*lowp+mass*mass)-mass;
     //if(6 == idx && e > 20.*GeV && name == "XS") { e = 20.*GeV; }
     dParticle.SetKineticEnergy(e);
     xse[i] = 0.;
+
     if(isHNX < 0) {
       if (idx == 6 && (name == "CHIPS" || name == "XS" || name == "IAEA")){
 	xsi[i] = inel->GetElementCrossSection(&dParticle,mat->GetZ(),0)/millibarn;
-	dParticle.SetKineticEnergy(le);
-	lxsi[i] = inel->GetElementCrossSection(&dParticle,mat->GetZ(),0)/millibarn;
 	dParticle.SetKineticEnergy(lowe);
 	lowxsi[i] = inel->GetElementCrossSection(&dParticle,mat->GetZ(),0)/millibarn;
       } else if (idx == 6 && (name == "ISOCHIPS" || name == "ISOXS" ||name == "ISOIAEA")){
 	xsi[i] = inel->GetIsoCrossSection(&dParticle,Z,A)/millibarn;
-	dParticle.SetKineticEnergy(le);
-	lxsi[i] = inel->GetIsoCrossSection(&dParticle,Z,A)/millibarn;
 	dParticle.SetKineticEnergy(lowe);
 	lowxsi[i] = inel->GetIsoCrossSection(&dParticle,Z,A)/millibarn;
 
@@ -481,7 +493,6 @@ int main(int argc, char** argv)
     histo.Fill(1,x0,xse[i]);
     histo.Fill(2,x0,xst[i]);
     //histo.Fill(3,x0,em[i]);
-    if(idx == 6) histo.Fill(4,lx0,lxsi[i]);
     if(idx == 6) histo.Fill(5,lowx0,lowxsi[i]);
   }
   G4cout << "------------------------------------------------------------------------------------"
