@@ -52,7 +52,7 @@
 //#include "G4IsotopeList.hh"
 #include <vector>
 
-
+/*
 static const G4int amin[] = {
   0,
   1,   3,   6,   9,  10,  12,  14,  16,  19,  20,  //1-10
@@ -91,7 +91,7 @@ static const G4double aeff[] = {
  174.967, 178.485, 180.948, 183.842, 186.207, 190.225, 192.216, 195.078, 196.967, 200.599,  //71-80
  204.383, 207.217,  208.98, 208.982, 209.987, 222.018,  223.02, 226.025, 227.028, 232.038,  //81-90
  231.036, 238.029};
-
+*/
 
 class G4DynamicParticle;
 class G4ParticleDefinition;
@@ -160,7 +160,7 @@ private:
   static const G4int rTransitionBound = 150.*CLHEP::MeV; // Upper limit of the linear transition between IAEA database and CHIPS model
   const G4int freeVectorException[11] = {4, 6, 7, 8, 27, 39, 45, 65, 67, 69, 73};
   static G4ElementData* data;
-  static G4double coeff[2][3]; // Previous CHIPS photonuclear model had a problem with high energy parametrisation for isotopes of H and He, coefficient is needed to connect isotope cross section with element cross-section on high energies.
+  static G4double coeff[3][3]; // Previous CHIPS photonuclear model had a problem with high energy parametrisation for isotopes of H and He, coefficient is needed to connect isotope cross section with element cross-section on high energies.
   static G4String gDataDirectory;
   
 #ifdef G4MULTITHREADED
