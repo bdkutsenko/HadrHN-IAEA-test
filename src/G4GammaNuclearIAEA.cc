@@ -47,7 +47,7 @@
 #include "Randomize.hh"
 #include "G4SystemOfUnits.hh"
 #include "G4Gamma.hh"
-//#include "G4IsotopeList.hh"
+#include "G4IsotopeList.hh"
 
 #include <fstream>
 #include <sstream>
@@ -56,11 +56,13 @@
 // factory
 #include "G4CrossSectionFactory.hh"
 //
+
+
 G4_DECLARE_XS_FACTORY(G4GammaNuclearIAEA);
 
 G4ElementData* G4GammaNuclearIAEA::data = nullptr;
 
-G4double G4GammaNuclearIAEA::coeff[2][3];
+G4double G4GammaNuclearIAEA::coeff[3][3];
 G4String G4GammaNuclearIAEA::gDataDirectory = "";
 
 #ifdef G4MULTITHREADED
@@ -122,12 +124,12 @@ G4GammaNuclearIAEA::ElementCrossSection(G4double ekin, G4int ZZ){
   G4double xs = 0.0;
   G4double emax;
   G4int Z = (ZZ >= MAXZGAMMAIAEA) ? MAXZGAMMAIAEA - 1 : ZZ;
-  theGamma->SetKineticEnergy(ekin); 
+  theGamma->SetKineticEnergy(ekin);
+  
   auto pv = GetPhysicsVector(Z);
-
   if(pv == nullptr) emax = 0.;
   else emax = pv->GetMaxEnergy();
-
+  
   if(ekin <= emax) {
     xs = pv->Value(ekin*MeV);
   }
@@ -148,6 +150,7 @@ G4GammaNuclearIAEA::ElementCrossSection(G4double ekin, G4int ZZ){
 	    << G4endl;
   }
 #endif
+ 
   return xs;
 
 }
@@ -166,7 +169,8 @@ G4GammaNuclearIAEA::IsoCrossSection(G4double ekin, G4int ZZ, G4int A)
 {
   G4double xs = 0.0;
   G4double emax;
-  G4int Z = (ZZ >= MAXZGAMMAIAEA) ? MAXZGAMMAIAEA - 1 : ZZ; 
+  G4int Z = (ZZ >= MAXZGAMMAIAEA) ? MAXZGAMMAIAEA - 1 : ZZ;
+  
   /*
   G4cout << "IsoCrossSection  Z= " << Z << "  A= " << A 
          << "  Amin= " << amin[Z] << " Amax= " << amax[Z]
@@ -305,7 +309,7 @@ G4GammaNuclearIAEA::BuildPhysicsTable(const G4ParticleDefinition& p)
   if(isMaster) {
     for ( auto & elm : *table ) {
       G4int Z = std::max( 1, std::min( elm->GetZasInt(), MAXZGAMMAIAEA-1) );
-      if ( nullptr == data->GetElementData(Z) ) { Initialise(Z); }
+      if ( nullptr == data->GetElementData(Z) ) { Initialise(Z); } 
     }
   }
 
@@ -363,7 +367,6 @@ void G4GammaNuclearIAEA::Initialise(G4int Z)
   //ost << FindDirectoryPath() << Z ;
   ost << "data/inel" << Z ;
   G4PhysicsVector* v = RetrieveVector(ost, true, Z);
-  
   data->InitialiseForElement(Z, v);
  /*
   G4cout << "G4NeutronInelasticXS::Initialise for Z= " << Z 
@@ -388,8 +391,8 @@ void G4GammaNuclearIAEA::Initialise(G4int Z)
 	if(sig2 > 0.) coeff[Z][A-amin[Z]]=(sig1/sig2);
 	else coeff[Z][A-amin[Z]]=1.;
       }
-    }
-  }
+    }   
+  }  
 }
 
 
@@ -397,7 +400,7 @@ G4PhysicsVector*
 G4GammaNuclearIAEA::RetrieveVector(std::ostringstream& ost, G4bool warn, G4int Z)
 {
   G4PhysicsVector* v = nullptr;
-
+  
   std::ifstream filein(ost.str().c_str());
   if (!(filein)) {
     if(warn) {
@@ -425,7 +428,7 @@ G4GammaNuclearIAEA::RetrieveVector(std::ostringstream& ost, G4bool warn, G4int Z
     }
 
   }
-
+   
  return v;
 
 }
